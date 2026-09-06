@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>写真評価プロトタイプ v0.1</title>
+<style>
+:root{
+  --bg:#f7f7f5; --card:#ffffff; --ink:#191918; --sub:#6b6b68; --line:#e6e5e1;
+  --accent:#2f6fdd; --good:#1f8a4c; --warn:#c26a12; --bad:#c0392b; --chip:#f1f0ed;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif;}
+body{padding-bottom:88px;font-size:15px;line-height:1.6}
+header{position:sticky;top:0;z-index:20;background:rgba(247,247,245,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);padding:12px 16px}
+header h1{margin:0;font-size:16px;font-weight:700;letter-spacing:.02em}
+header p{margin:2px 0 0;font-size:11px;color:var(--sub)}
+main{max-width:760px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 4px;font-size:14px;font-weight:700}
+.card h2 .n{display:inline-flex;width:20px;height:20px;border-radius:6px;background:var(--ink);color:#fff;
+  align-items:center;justify-content:center;font-size:11px;margin-right:8px;vertical-align:1px}
+.hint{font-size:12px;color:var(--sub);margin:0 0 12px}
+label.fl{display:block;font-size:12px;font-weight:600;margin:12px 0 4px}
+input[type=text],textarea,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+  background:#fff;font-size:14px;font-family:inherit;color:var(--ink)}
+textarea{resize:vertical;min-height:60px}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.drop{border:1.5px dashed #cfcec9;border-radius:12px;padding:22px 14px;text-align:center;background:#fcfcfb;cursor:pointer}
+.drop.on{border-color:var(--accent);background:#f0f5ff}
+.drop b{display:block;font-size:13px}.drop span{font-size:11px;color:var(--sub)}
+.preview{margin-top:12px;display:none}
+.preview img{width:100%;border-radius:10px;display:block}
+.meta{font-size:11px;color:var(--sub);margin-top:6px;word-break:break-all}
+button{font-family:inherit;font-size:14px;font-weight:600;border-radius:10px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);padding:11px 14px;cursor:pointer}
+button.pri{background:var(--ink);color:#fff;border-color:var(--ink);width:100%}
+button.pri:disabled{opacity:.35;cursor:not-allowed}
+button.sm{padding:7px 11px;font-size:12px}
+.tabs{display:flex;gap:6px;margin:0 0 14px;overflow:auto}
+.tabs button{white-space:nowrap;background:var(--chip);border:none;color:var(--sub);font-size:13px;padding:8px 13px}
+.tabs button.on{background:var(--ink);color:#fff}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;color:var(--sub);font-weight:600}
+td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.total{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.total small{font-size:13px;font-weight:600;color:var(--sub);margin-left:4px}
+.bar{height:6px;border-radius:99px;background:var(--chip);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--ink)}
+.blind{background:#f4f1ea;border-left:3px solid #c8a24a;border-radius:0 10px 10px 0;padding:12px 14px;font-size:13px}
+.blind dt{font-size:11px;color:var(--sub);font-weight:600;margin-top:8px}
+.blind dt:first-child{margin-top:0}
+.blind dd{margin:2px 0 0}
+ul.tight{margin:6px 0 0;padding-left:18px}ul.tight li{margin:3px 0;font-size:13px}
+.next{background:#eef4ff;border:1px solid #d3e0fb;border-radius:12px;padding:14px}
+.next b{display:block;font-size:11px;color:var(--accent);letter-spacing:.06em;margin-bottom:4px}
+.next .act{font-size:15px;font-weight:700;line-height:1.45}
+.flag{display:inline-block;font-size:10px;font-weight:700;padding:3px 7px;border-radius:99px;margin-left:6px;vertical-align:2px}
+.flag.hi{background:#e4f4ea;color:var(--good)}.flag.mid{background:#fdf1e0;color:var(--warn)}
+.flag.lo{background:#fdeae7;color:var(--bad)}
+.note{font-size:11px;color:var(--sub);margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.hist{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.hist img{width:56px;height:56px;object-fit:cover;border-radius:8px;flex:none;background:var(--chip)}
+.hist .t{flex:1;min-width:0}
+.hist .t b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist .t span{font-size:11px;color:var(--sub)}
+.hist .s{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.seg{display:flex;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:none;border-radius:0;font-size:12px;padding:9px 4px;background:#fff;color:var(--sub)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--ink);color:#fff}
+.empty{text-align:center;color:var(--sub);font-size:13px;padding:26px 0}
+.cmpsel{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cmpsel .pick{border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px}
+.diag{font-size:11px;color:var(--sub);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  background:#fafaf8;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;line-height:1.5}
+footer{max-width:760px;margin:0 auto;padding:4px 16px 28px;font-size:11px;color:var(--sub)}
+.hidden{display:none!important}
+@media(max-width:520px){.row{flex-direction:column}.cmpsel{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>📸 写真評価プロトタイプ <span style="font-weight:500;color:#6b6b68">v0.1</span></h1>
+  <p>意図一致度25 / 意図に対する構図20 / 視線と主題の伝達25 / 技術的減点20 / 光と色の整理10</p>
+</header>
+
+<main>
+  <div class="tabs">
+    <button data-tab="judge" class="on">判定</button>
+    <button data-tab="hist">履歴</button>
+    <button data-tab="cmp">2枚比較</button>
+    <button data-tab="conf">設定</button>
+  </div>
+
+  <!-- ============ 判定 ============ -->
+  <section id="tab-judge">
+    <div class="card">
+      <h2><span class="n">1</span>写真と意図を入れる</h2>
+      <p class="hint">意図は「何を見せたかったか」を一文で。ここが採点の基準になります。</p>
+      <div class="drop" id="drop">
+        <b>写真を選ぶ</b>
+        <span>タップ／ドラッグ＆ドロップ</span>
+      </div>
+      <input type="file" id="file" accept="image/*" class="hidden" />
+      <div class="preview" id="prev"><img id="prevImg" alt="" /><div class="meta" id="prevMeta"></div></div>
+
+      <label class="fl" for="intent">この写真で見せたかったもの（一文）</label>
+      <textarea id="intent" placeholder="例：カラフルな椅子が並んでいる様子"></textarea>
+      <div class="row">
+        <div>
+          <label class="fl" for="gear">撮影機材</label>
+          <select id="gear">
+            <option value="smartphone">スマホ</option>
+            <option value="camera">ミラーレス・一眼</option>
+            <option value="other">その他</option>
+          </select>
+        </div>
+        <div>
+          <label class="fl" for="route">画像の経路</label>
+          <select id="route">
+            <option value="original">元ファイルのまま</option>
+            <option value="phone">スマホ経由（オリジナル保持）</option>
+            <option value="sns">クラウド／SNS経由</option>
+            <option value="screenshot">スクリーンショット</option>
+          </select>
+        </div>
+      </div>
+      <div id="selfBox" class="hidden">
+        <label class="fl">意図は伝わっていますか（自己判定モードのみ）</label>
+        <p class="hint" style="margin:0 0 6px">下のブラインド読みを見てから選んでください。APIキーを設定すると自動判定になります。</p>
+        <div class="seg" id="selfSeg">
+          <button data-v="25">完全一致</button>
+          <button data-v="17" class="on">弱い</button>
+          <button data-v="8">別が主役</button>
+          <button data-v="0">伝わらない</button>
+        </div>
+      </div>
+      <div style="margin-top:14px"><button class="pri" id="run" disabled>評価する</button></div>
+      <p class="hint" id="gateNote" style="margin:8px 0 0;text-align:center;color:var(--warn)"></p>
+      <p class="hint" id="apiNote" style="margin:8px 0 0;text-align:center;word-break:break-all"></p>
+      <p class="note" id="modeNote"></p>
+    </div>
+
+    <div id="result" class="hidden">
+      <div class="card">
+        <h2><span class="n">2</span>ブラインド読み<span class="flag mid">意図を伏せた読み取り</span></h2>
+        <p class="hint">写真だけから何が伝わるか。ここと意図のズレが改善点になります。</p>
+        <dl class="blind" id="blind"></dl>
+      </div>
+
+      <div class="card">
+        <h2><span class="n">3</span>採点</h2>
+        <div id="totalWrap"></div>
+        <table id="scoreTable"></table>
+        <p class="note" id="scoreNote"></p>
+      </div>
+
+      <div class="card">
+        <h2><span class="n">4</span>効いている点 / ズレている点</h2>
+        <div class="row">
+          <div><label class="fl" style="color:var(--good)">効いている点</label><ul class="tight" id="good"></ul></div>
+          <div><label class="fl" style="color:var(--bad)">ズレている点</label><ul class="tight" id="bad"></ul></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="n">5</span>次の一手</h2>
+        <div class="next">
+          <b>最優先アクション（1つだけ）</b>
+          <div class="act" id="act1"></div>
+        </div>
+        <label class="fl">補助アクション</label>
+        <ul class="tight" id="act2"></ul>
+        <div style="margin-top:14px"><button id="save">履歴に保存する</button></div>
+      </div>
+
+      <div class="card">
+        <h2>計測���（プロトタイプの根拠）</h2>
+        <p class="hint">技術・視線・色の各軸は、この場でブラウザ内で計測した実数値から採点しています。</p>
+        <div class="diag" id="diag"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 履歴 ============ -->
+  <section id="tab-hist" class="hidden">
+    <div class="card">
+      <h2>スコア推移</h2>
+      <p class="hint">保存した順に並びます。差が±5点以内は実力差ではなくブレとみなします。</p>
+      <svg id="chart" viewBox="0 0 320 120" style="width:100%;height:130px"></svg>
+      <div id="weak" class="note"></div>
+    </div>
+    <div class="card">
+      <h2>保存した写真</h2>
+      <div id="histList"></div>
+      <div style="margin-top:12px"><button class="sm" id="clear">履歴を消す</button></div>
+    </div>
+  </section>
+
+  <!-- ============ 比較 ============ -->
+  <section id="tab-cmp" class="hidden">
+    <div class="card">
+      <h2>2枚を比べる</h2>
+      <p class="hint">履歴から2枚選びます。合計差が5点以内なら「差なし」と表示します。</p>
+      <div class="cmpsel">
+        <div class="pick"><label class="fl" style="margin-top:0">写真1</label><select id="cmpA"></select></div>
+        <div class="pick"><label class="fl" style="margin-top:0">写真2</label><select id="cmpB"></select></div>
+      </div>
+      <div style="margin-top:12px"><button class="pri" id="cmpRun">比較する</button></div>
+    </div>
+    <div class="card hidden" id="cmpOut"></div>
+  </section>
+
+  <!-- ============ 設定 ============ -->
+  <section id="tab-conf" class="hidden">
+    <div class="card">
+      <h2>モデル設定</h2>
+      <p class="hint">モデル名はコードに埋め込まず、ここから差し替えられる設計にしています。</p>
+      <label class="fl" for="mBlind">ブラインド読み用モデル（安いモデルで十分）</label>
+      <input type="text" id="mBlind" />
+      <label class="fl" for="mScore">採点用モデル（ここだけ賢いモデル）</label>
+      <input type="text" id="mScore" />
+      <label class="fl" for="key">APIキー（任意・この端末のブラウザにのみ保存）</label>
+      <input type="text" id="key" placeholder="未入力なら自己判定モードで動きます" />
+      <label class="fl" for="edge">送信時の長辺（px）</label>
+      <input type="text" id="edge" />
+      <div style="margin-top:14px"><button class="pri" id="saveConf">保存する</button></div>
+      <p class="note">プロトタイプではブラウザから直接APIを呼びます。本番ではキーをサーバー側に置き、画面には出さない構成に変えてください。</p>
+    </div>
+    <div class="card">
+      <h2>このプロトタイプの範囲</h2>
+      <table>
+        <tr><th>できること</th><th>状態</th></tr>
+        <tr><td>意図の入力とブラインド読みの分離</td><td>実装済み</td></tr>
+        <tr><td>技術・視線・色の自動計測と減点</td><td>実装済み（ブラウザ内計測）</td></tr>
+        <tr><td>意図一致度と意図に対する構図の自動判定</td><td>APIキー設定時のみ</td></tr>
+        <tr><td>履歴・推移グラフ・弱点抽出</td><td>実装済み（端末内保存）</td></tr>
+        <tr><td>2枚同時比較と「差なし」判定</td><td>実装済み</td></tr>
+        <tr><td>水平の傾き検出</td><td>未実装</td></tr>
+      </table>
+    </div>
+  </section>
+</main>
+<footer>プロトタイプ v0.1 ／ 画像は端末内で処理し、外部に送るのはAPIキーを設定した場合のみです。</footer>
+
+<script>
+/* ============ 設定（コードに埋め込まず差し替え可能にする） ============ */
+const DEFAULTS={
+  modelBlind:"gemini-flash-lite-latest",
+  modelScore:"gemini-flash-latest",
+  apiKey:"",
+  longEdge:1568,
+  weights:{intent:25,frame:20,gaze:25,tech:20,color:10}
+};
+const LS="photoEval.v01";
+/* 埋め込み表示ではlocalStorageが遮断されて例外を投げることがあるので、失敗しても止まらないようにする */
+const MEM={};let STORAGE_OK=true;
+const SS={
+  get:function(k){try{const v=localStorage.getItem(k);return v===null?MEM[k]:v;}
+    catch(e){STORAGE_OK=false;return MEM[k];}},
+  set:function(k,v){MEM[k]=v;try{localStorage.setItem(k,v);}catch(e){STORAGE_OK=false;}}
+};
+function parse(s,f){try{return JSON.parse(s||"");}catch(e){return f;}}
+let CONF=Object.assign({},DEFAULTS,parse(SS.get(LS+".conf"),{}));
+let HIST=parse(SS.get(LS+".hist"),[]);
+let cur=null, metrics=null, selfIntent=17;
+
+/* ============ プロンプト（確定版 v1.0 をそのまま保持） ============ */
+const PROMPT_BLIND=`あなたは写真の内容を記述する観察者です。評価・採点・助言は一切してはいけません。
+1. 何を見せようとしている写真に見えるか（一文、20〜40字）
+2. 最初に目が行く場所（画面内の位置���具体物）
+3. 2番目に目が行く場所（位置と具体物）
+4. 目立っているのに主題と関係なさそうな要素（位置と具体物。なければ「なし」）
+5. 撮られた状況の推測（場所・時間帯・出来事）
+制約：評価語・褒め言葉・改善案は禁止。断定できない場合は「判断できない」と書く。
+JSONで {"summary":"","first":"","second":"","noise":"","context":""} の形だけを返し���ください。`;
+const PROMPT_SCORE=`あなたは写真の上達を支援する評価者です。「良い写真か」は判定せず、意図が伝わっているかだけを判定します。
+三分割法などの構図の慣習を根拠に減点してはいけません。すべての指摘は画面内の位置と具体物に紐づけてください。
+意図一致度は 完全一致25 / 弱い17 / 別が主役8 / 伝わらない0 の4段階から選びます。
+意図に対する構図は 主題の面積比・位置と向き・不要物の写り込み・撮影角度と高さ・前景背景との分離 の5項目を各0〜4点で採点し、frame はその合計にします。
+【根拠の書き方：ここが最重要】
+・intentReason は120〜200字。①写真から実際に読み取れたもの ②撮影者が書いた意図 ③その差がどこで生じているか、の順に書く。必ず画面内の位置（左上・手前・奥など）と具体物の名前を挙げる。
+・frameItems は5項目すべてを必ず返す。各 reason は60〜120字で、「何が」「どこに」「どう写っているから」何点なのかを書く。
+・「良い」「悪い」「バランスが取れている」「効果的だ」のような、写真を見ていなくても書ける文は禁止。
+・点数だけ、単語の羅列、項目名の繰り返しで返してはいけない。必ず文章で書く。
+・断定できない場合は「この画像からは判断できない」と明記し、推測で埋めない。
+助言は最優先1つと補助2つ。体の動きか設定値で書き、機材がスマホの場合は絞りやシャッタースピードに触れないでください。
+JSONで {"intent":0,"intentReason":"","frame":0,"frameItems":[{"name":"主題の面積比","pts":0,"reason":""},{"name":"位置と向き","pts":0,"reason":""},{"name":"不要物の写り込み","pts":0,"reason":""},{"name":"撮影角度と高さ","pts":0,"reason":""},{"name":"前景背景との分離","pts":0,"reason":""}],"good":["","",""],"bad":["","",""],"act1":"","act2":["",""]} だけを返してください。`;
+
+/* ============ 画面切替 ============ */
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  ["judge","hist","cmp","conf"].forEach(t=>
+    document.getElementById("tab-"+t).classList.toggle("hidden",t!==b.dataset.tab));
+  if(b.dataset.tab==="hist")renderHist();
+  if(b.dataset.tab==="cmp")fillCmp();
+});
+
+/* ============ 入力 ============ */
+const drop=document.getElementById("drop"),file=document.getElementById("file");
+drop.onclick=()=>file.click();
+drop.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("on")});
+drop.addEventListener("dragleave",()=>drop.classList.remove("on"));
+drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("on");
+  if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])});
+file.onchange=()=>{if(file.files[0])load(file.files[0])};
+document.getElementById("intent").oninput=gate;
+document.getElementById("selfSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+  document.getElementById("selfSeg").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+  selfIntent=+b.dataset.v;});
+
+function gate(){
+  const hasImg=!!cur;
+  const hasIntent=!!document.getElementById("intent").value.trim();
+  const b=document.getElementById("run");
+  b.disabled=!(hasImg&&hasIntent);
+  const need=[];
+  if(!hasImg)need.push("写真を選ぶ");
+  if(!hasIntent)need.push("意図を一文書く");
+  document.getElementById("gateNote").textContent=
+    need.length?("あと："+need.join("と")+" → 押せるようになります"):"";
+}
+function load(f){
+  const r=new FileReader();
+  r.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      cur={name:f.name,size:f.size,w:img.naturalWidth,h:img.naturalHeight,dataUrl:r.result,img:img};
+      document.getElementById("prevImg").src=r.result;
+      document.getElementById("prev").style.display="block";
+      document.getElementById("prevMeta").textContent=
+        f.name+" ／ "+img.naturalWidth+"×"+img.naturalHeight+"px ／ "+Math.round(f.size/1024)+"KB"+
+        " ／ 送信時は長辺"+CONF.longEdge+"pxに縮小";
+      gate();
+    };
+    img.src=r.result;
+  };
+  r.readAsDataURL(f);
+}
+
+/* ============ 画像計測（ここは本当に計算している） ============ */
+function measure(img){
+  const W=192,H=Math.max(1,Math.round(W*img.naturalHeight/img.naturalWidth));
+  const c=document.createElement("canvas");c.width=W;c.height=H;
+  const g=c.getContext("2d",{willReadFrequently:true});g.drawImage(img,0,0,W,H);
+  const d=g.getImageData(0,0,W,H).data;
+  const lum=new Float32Array(W*H);
+  let sum=0,clipW=0,clipB=0,hues=new Array(12).fill(0),satPix=0;
+  for(let i=0,p=0;i<d.length;i+=4,p++){
+    const r=d[i],gg=d[i+1],b=d[i+2];
+    const y=0.2126*r+0.7152*gg+0.0722*b;lum[p]=y;sum+=y;
+    if(y>249)clipW++; if(y<6)clipB++;
+    const mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);
+    const s=mx===0?0:(mx-mn)/mx;
+    if(s>0.25&&mx>40){
+      let h=0;const dd=mx-mn;
+      if(mx===r)h=((gg-b)/dd)%6; else if(mx===gg)h=(b-r)/dd+2; else h=(r-gg)/dd+4;
+      h=(h*60+360)%360;hues[Math.floor(h/30)]++;satPix++;
+    }
+  }
+  const n=W*H,avg=sum/n;
+  let varsum=0;for(let p=0;p<n;p++)varsum+=(lum[p]-avg)**2;
+  const sd=Math.sqrt(varsum/n);
+  // ラプラシアン分散（ブレ・解像感の指標）
+  let lap=0,lc=0;
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+    const i=y*W+x;
+    const v=4*lum[i]-lum[i-1]-lum[i+1]-lum[i-W]-lum[i+W];
+    lap+=v*v;lc++;
+  }
+  const lapVar=lap/Math.max(1,lc);
+  // 9分割の顕著性（明るさ＋局所コントラスト）
+  const names=["左上","中央上","右上","左中","中央","右中","左下","中央下","右下"];
+  const blocks=[];
+  for(let by=0;by<3;by++)for(let bx=0;bx<3;bx++){
+    let s=0,cnt=0,mn=255,mx=0,e=0;
+    const x0=Math.floor(bx*W/3),x1=Math.floor((bx+1)*W/3);
+    const y0=Math.floor(by*H/3),y1=Math.floor((by+1)*H/3);
+    for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
+      const v=lum[y*W+x];s+=v;cnt++;if(v<mn)mn=v;if(v>mx)mx=v;
+      if(x>0&&y>0&&x<W-1&&y<H-1){const i=y*W+x;
+        e+=Math.abs(4*lum[i]-lum[i-1]-lum[i+1]-lum[i-W]-lum[i+W]);}
+    }
+    const mean=s/cnt,contrast=mx-mn,edge=e/cnt;
+    blocks.push({name:names[by*3+bx],mean:mean,contrast:contrast,edge:edge,
+      sal:mean*0.55+contrast*0.25+edge*0.9});
+  }
+  const sorted=blocks.slice().sort((a,b)=>b.sal-a.sal);
+  const colorCount=hues.filter(v=>v/Math.max(1,satPix)>0.07).length;
+  const domIdx=hues.indexOf(Math.max.apply(null,hues));
+  const hueNames=["赤","橙","黄","黄緑","緑","青緑","水色","青","藍","紫","赤紫","桃"];
+  return {
+    avg:avg,sd:sd,clipW:100*clipW/n,clipB:100*clipB/n,lapVar:lapVar,
+    blocks:blocks,top:sorted[0],second:sorted[1],quiet:sorted[8],
+    colorCount:colorCount,dom:hueNames[domIdx]||"—",satRate:100*satPix/n,
+    edgeAvg:blocks.reduce((a,b)=>a+b.edge,0)/9,
+    salRatio:sorted[0].sal/Math.max(1,sorted[4].sal)
+  };
+}
+
+/* ============ 採点 ============ */
+function scoreTech(m,route){
+  const low=(route==="sns"||route==="screenshot");
+  if(low)return{pts:20,unknown:true,
+    note:"この経路（"+(ROUTE_JA[route]||route)+"）では、圧縮や再保存によってブレやノイズが元の写真と変わっています。<br>そのため<b>ブレ・ノイズ・白飛びは減点していません</b>（20点のまま）。撮影時の元ファイルを同じ画面に通すと、ここだけ実測に切り替わります。"};
+  let pts=20;const s=[];
+  if(m.lapVar<28){pts-=5;s.push("<b>-5　全体に微ブレがあります。</b>輪郭の鋭さを示す値が "+m.lapVar.toFixed(1)+" でした。55以上でピントが合っている水準、28未満は手ブレか被写体ブレが起きている水準です。");}
+  else if(m.lapVar<55){pts-=3;s.push("<b>-3　解像感がやや甘いです。</b>輪郭の鋭さは "+m.lapVar.toFixed(1)+"。ピントは来ていますが、拡大すると滲みが見える水準です。");}
+  else{s.push("ピントと解像感は基準内です（輪郭の鋭さ "+m.lapVar.toFixed(1)+"、55以上が目安）。");}
+  if(m.clipW>12){pts-=5;s.push("<b>-5　画面の "+m.clipW.toFixed(1)+"% が真っ白に飛んでいます。</b>この面積になると、後から明るさを下げても色も形も戻りません。");}
+  else if(m.clipW>4){pts-=3;s.push("<b>-3　画面の "+m.clipW.toFixed(1)+"% が白飛びしています。</b>空や光源など部分的な範囲で階調が失われています（4%以下なら許容範囲です）。");}
+  else{s.push("白飛びは "+m.clipW.toFixed(1)+"% にとどまり、明るい部分の階調は保たれています。");}
+  if(m.clipB>8){pts-=4;s.push("<b>-4　画面の "+m.clipB.toFixed(1)+"% が黒く潰れています。</b>影の中のディテールが消えています。");}
+  else{s.push("黒潰れは "+m.clipB.toFixed(1)+"% で、暗部のディテールは残っています。");}
+  s.push("<span style='color:#9a9a96'>水平の傾きはこのプロトタイプでは未検出です（Phase 2で追加予定）。</span>");
+  return{pts:Math.max(0,pts),unknown:false,note:s.join("<br>")};
+}
+function scoreGaze(m){
+  const reach=Math.round(Math.min(10,Math.max(2,(m.salRatio-0.85)*11+5)));
+  const fig=Math.round(Math.min(8,Math.max(2,m.top.contrast/255*9+1)));
+  const bg=Math.round(Math.min(7,Math.max(1,7-(m.edgeAvg-6)*0.55)));
+  const s=[];
+  s.push("<b>視線の到達 "+reach+"/10</b>　画面を9分割して明るさ・明暗差・輪郭量を測ると、最も目を引くのは<b>"+m.top.name+"</b>でした。他の領域の "+m.salRatio.toFixed(2)+" 倍の強さです"+(m.salRatio>1.25?"。主役がはっきり決まっています。":(m.salRatio>1.05?"。差はありますが決定的ではなく、視線が迷う余地があります。":"。差が小さく、どこを見ればよいのかが決まっていません。")));
+  s.push("<b>図と地の分離 "+fig+"/8</b>　その領域の明暗差は "+Math.round(m.top.contrast)+" です"+(m.top.contrast>120?"。背景から十分に浮き上がっています。":(m.top.contrast>70?"。分離はしていますが、背景に溶けかけています。":"。背景と明るさが近く、主題が沈んでいます。")));
+  s.push("<b>背景の混雑 "+bg+"/7</b>　画面全体の要素の細かさは "+m.edgeAvg.toFixed(1)+" です"+(m.edgeAvg>12?"。背景の情報量が多く、視線が散ります。":(m.edgeAvg>7?"。やや情報が多めですが、許容範囲です。":"。背景は静かで、主題の邪魔をしていません。")));
+  return{pts:reach+fig+bg,note:s.join("<br>")};
+}
+function scoreColor(m,route){
+  const low=(route==="sns"||route==="screenshot");
+  const bal=Math.round(Math.min(4,Math.max(0,4-Math.abs(m.avg-124)/22)));
+  const uni=Math.round(Math.min(3,Math.max(0,3-Math.abs(m.satRate-24)/12)));
+  const cnt=m.colorCount<=3?3:(m.colorCount<=5?2:1);
+  const s=[];
+  if(low)s.push("<span style='color:#c07a2c'>この経路では色が変換されている可能性があるため、以下は<b>参考値</b>で、合計点には含めていません。</span>");
+  s.push("<b>明暗バランス "+bal+"/4</b>　平均の明るさは "+Math.round(m.avg)+"（中庸は124前後）、明暗の幅は "+Math.round(m.sd)+" です"+(m.sd>45?"。幅が広く、平板になっていません。":"。幅が狭く、全体が平坦に見えます。"));
+  s.push("<b>色の統一感 "+uni+"/3</b>　最も面積を占めるのは<b>"+m.dom+"</b>系で、鮮やかな色が画面の "+m.satRate.toFixed(0)+"% を覆っています"+(m.satRate>40?"。彩度の高い面が広く、視線が分散しやすい状態です。":"。"));
+  s.push("<b>色数の整理 "+cnt+"/3</b>　識別できた色相は "+m.colorCount+" 種です"+(m.colorCount<=3?"。色が整理されています。":(m.colorCount<=5?"。やや多めです。":"。色数が多く、まとまりが弱くなっています。")));
+  return{pts:bal+uni+cnt,low:low,note:s.join("<br>")};
+}
+function frameFromMetrics(m,intent){
+  const area=Math.round(Math.min(4,Math.max(1,(m.top.sal/Math.max(1,m.quiet.sal))*1.1)));
+  const pos=/上|下|中/.test(m.top.name)?3:2;
+  const noise=m.quiet.mean>150?2:3;
+  const ang=3,sep=Math.round(Math.min(4,Math.max(1,m.top.contrast/70)));
+  const s=[];
+  s.push("<span style='color:#c07a2c'>APIキーが未設定のため、以下は画面の統計から推定した<b>暫定値</b>です。写真に何が写っているかは読めていません。</span>");
+  s.push("<b>主題の面積比 "+area+"/4</b>　最も強い領域と最も静かな領域の強さの比から推定しました。実際の被写体の大きさは見ていません。");
+  s.push("<b>位置と向き "+pos+"/4</b>　主題らしき領域は<b>"+m.top.name+"</b>にあります。向きは画像だけでは判定できていません。");
+  s.push("<b>不要物の写り込み "+noise+"/4</b>　最も静かな領域は"+m.quiet.name+"で、平均の明るさは "+Math.round(m.quiet.mean)+" です"+(m.quiet.mean>150?"。ここに明るい面があり、視線を引いている可能性があります。":"。目立つ明るい面はありません。"));
+  s.push("<b>撮影角度と高さ "+ang+"/4</b>　画像の統計だけでは判定できないため、中央値の3点を置いています。");
+  s.push("<b>前景背景との分離 "+sep+"/4</b>　主題らしき領域の明暗差は "+Math.round(m.top.contrast)+" でした。");
+  return{pts:area+pos+noise+ang+sep,note:s.join("<br>")};
+}
+/* ============ 実行 ============ */
+const GEAR_JA={smartphone:"スマホ",camera:"ミラーレス・一眼",other:"その他"};
+const ROUTE_JA={original:"元ファイルのまま",phone:"スマホ経由",sns:"クラウド／SNS経由",screenshot:"スクリーンショット"};
+const LBL={
+  run:"評価する", blind:"ブラインド読み中…", scoring:"採点中…",
+  calling:" に問い合わせ中", scoringWith:" で採点中",
+  done:"AI判定済み：", failed:"AI呼び出しに失敗しました。端末内の計測値だけで採点しています。→ ",
+  inputHead:"\n\n【入力】\n意図：", gearHead:"\n撮影機材：",
+  routeHead:"\n画像の経路：", blindHead:"\nブラインド読みの結果："
+};
+function shrink(img,maxEdge){
+  const s=Math.min(1,maxEdge/Math.max(img.naturalWidth,img.naturalHeight));
+  const w=Math.max(1,Math.round(img.naturalWidth*s)),h=Math.max(1,Math.round(img.naturalHeight*s));
+  const c=document.createElement("canvas");c.width=w;c.height=h;
+  c.getContext("2d").drawImage(img,0,0,w,h);
+  return c.toDataURL("image/jpeg",0.9).split(",")[1];
+}
+async function callGemini(model,prompt,b64){
+  const url="https://generativelanguage.googleapis.com/v1beta/models/"+
+    encodeURIComponent(model)+":generateContent?key="+encodeURIComponent(CONF.apiKey);
+  const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      contents:[{role:"user",parts:[{text:prompt},{inline_data:{mime_type:"image/jpeg",data:b64}}]}],
+      generationConfig:{temperature:0,responseMimeType:"application/json"}
+    })});
+  let j=null;try{j=await res.json();}catch(e){}
+  if(!res.ok)throw new Error((j&&j.error&&j.error.message)||("HTTP "+res.status));
+  const parts=((((j||{}).candidates||[])[0]||{}).content||{}).parts||[];
+  const txt=parts.map(p=>p.text||"").join("").trim();
+  if(!txt)throw new Error("empty response");
+  try{return JSON.parse(txt);}
+  catch(e){const mm=txt.match(/\{[\s\S]*\}/);if(mm)return JSON.parse(mm[0]);throw new Error("non-JSON response");}
+}
+
+document.getElementById("run").onclick=async()=>{
+  const intent=document.getElementById("intent").value.trim();
+  const route=document.getElementById("route").value;
+  const gear=document.getElementById("gear").value;
+  metrics=measure(cur.img);
+  const m=metrics;
+  const tech=scoreTech(m,route),gaze=scoreGaze(m),col=scoreColor(m,route),fr=frameFromMetrics(m,intent);
+  const AI={blind:null,score:null};
+  const btn=document.getElementById("run"),st=document.getElementById("apiNote");
+  if(CONF.apiKey){
+    btn.disabled=true;st.style.color="var(--sub)";
+    try{
+      const b64=shrink(cur.img,CONF.longEdge);
+      btn.textContent=LBL.blind;st.textContent=CONF.modelBlind+LBL.calling;
+      AI.blind=await callGemini(CONF.modelBlind,PROMPT_BLIND,b64);
+      btn.textContent=LBL.scoring;st.textContent=CONF.modelScore+LBL.scoringWith;
+      const ctx=LBL.inputHead+intent+LBL.gearHead+(GEAR_JA[gear]||gear)+
+        LBL.routeHead+(ROUTE_JA[route]||route)+LBL.blindHead+JSON.stringify(AI.blind);
+      AI.score=await callGemini(CONF.modelScore,PROMPT_SCORE+ctx,b64);
+      st.textContent=LBL.done+CONF.modelBlind+" / "+CONF.modelScore;
+      st.style.color="var(--good)";
+    }catch(e){
+      AI.blind=null;AI.score=null;
+      st.textContent=LBL.failed+e.message;
+      st.style.color="var(--bad)";
+    }
+    btn.disabled=false;btn.textContent=LBL.run;
+  }else{st.textContent="";}
+  const aiOn=!!(AI.score&&typeof AI.score.intent==="number");
+  const intentPts=aiOn?Math.max(0,Math.min(25,AI.score.intent)):selfIntent;
+  if(AI.score&&typeof AI.score.frame==="number")fr.pts=Math.max(0,Math.min(20,AI.score.frame));
+
+  // ブラインド読み（計測値から生成。APIキーがあればここをモデル出力に置換する）
+  const blind={
+    summary:"画面"+m.top.name+"の"+m.dom+"系の要素を中心に据えた写真に見える",
+    first:m.top.name+"（明るさと明暗差が最大の領域）",
+    second:m.second.name,
+    noise:m.quiet.mean>150?m.quiet.name+"の明るい面":"判断できない",
+    context:"色相"+m.colorCount+"種／平均輝度"+Math.round(m.avg)+"。屋外の可能性が高い"
+  };
+  if(AI.blind)Object.keys(blind).forEach(k=>{if(AI.blind[k])blind[k]=String(AI.blind[k]);});
+  const bl=document.getElementById("blind");bl.innerHTML="";
+  [["何を見せようとしているように見えるか",blind.summary],["最初に目が行く場所",blind.first],
+   ["2番目に目が行く場所",blind.second],["主題と関係なさそうな目立つ要素",blind.noise],
+   ["状況の推測",blind.context]].forEach(([k,v])=>{
+    bl.insertAdjacentHTML("beforeend","<dt>"+k+"</dt><dd>"+v+"</dd>");});
+
+  // 合計（色軸が低信頼なら90点換算）
+  let raw=intentPts+fr.pts+gaze.pts+tech.pts+(col.low?0:col.pts);
+  let total=col.low?Math.round(raw/90*100):raw;
+  document.getElementById("totalWrap").innerHTML=
+    '<div class="total">'+total+'<small>/100'+(col.low?'（色軸を除外し90点換算）':'')+'</small></div>'+
+    '<div class="bar"><i style="width:'+total+'%"></i></div>';
+
+  const esc=v=>String(v==null?"":v).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const selfLabel={25:"完全に伝わっている",17:"やや弱い",8:"別のものが主役に見える",0:"伝わっていない"};
+  let intentNote;
+  if(aiOn){
+    intentNote=esc(AI.score.intentReason||"")+"<br><span style='color:#9a9a96'>判定："+CONF.modelScore+"</span>";
+  }else{
+    intentNote="<span style='color:#c07a2c'>自己申告「"+(selfLabel[selfIntent]||"-")+"」をそのまま点数にしています。</span><br>意図が伝わっているかは、写真に何が写っているかを読まなければ判定できません。設定タブでAPIキーを入れると、AIがブラインド読みの結果とあなたの意図を突き合わせ、理由の文章付きで採点します。";
+  }
+  let frameNote;
+  if(aiOn&&Array.isArray(AI.score.frameItems)&&AI.score.frameItems.length){
+    frameNote=AI.score.frameItems.map(it=>"<b>"+esc(it&&it.name)+" "+(it&&it.pts!=null?it.pts+"/4":"")+"</b>　"+esc(it&&it.reason)).join("<br>");
+  }else if(aiOn&&AI.score.frameReason){
+    frameNote=esc(AI.score.frameReason);
+  }else{
+    frameNote=fr.note;
+  }
+  const rows=[["意図一致度",25,intentPts,intentNote],
+    ["意図に対する構図",20,fr.pts,frameNote],
+    ["視線と主題の伝達",25,gaze.pts,gaze.note],
+    ["技術的減点",20,tech.pts,tech.note],
+    ["光と色の整理",10,col.pts,col.note]];
+  document.getElementById("scoreTable").innerHTML=
+    "<tr><th>軸</th><th class='num'>配点</th><th class='num'>獲得</th><th>根拠</th></tr>"+
+    rows.map(r=>"<tr><td style='vertical-align:top;white-space:nowrap'>"+r[0]+
+      "</td><td class='num' style='vertical-align:top'>"+r[1]+
+      "</td><td class='num' style='vertical-align:top'><b>"+r[2]+"</b></td>"+
+      "<td style='font-size:12px;line-height:1.75;color:#4a4a47'>"+r[3]+"</td></tr>").join("");
+  document.getElementById("scoreNote").textContent=
+    (route==="sns"||route==="screenshot")
+      ? "経路が低信頼のため、ブレ・ノイズ・白飛びは減点せず、色軸は採点から外しました。"
+      : "経路は高信頼です。全軸を採点しています。";
+
+  // 効いている点 / ズレている点
+  const good=[],bad=[];
+  if(m.top.contrast>120)good.push(m.top.name+"の明暗差が大きく、視線の入口になっている");
+  if(m.colorCount<=4)good.push("色相が"+m.colorCount+"種に整理されており、"+m.dom+"系が主導している");
+  if(m.lapVar>80)good.push("解像感が高く、主題の質感が残っている");
+  if(m.sd>45)good.push("明暗の幅が広く、平板になっていない");
+  if(m.clipW>4)bad.push(m.clipW.toFixed(1)+"%の面積が白飛びし、その部分の情報が消えている");
+  if(m.quiet.mean>150)bad.push(m.quiet.name+"に明るい面があり、視線が主題から逸れる");
+  if(m.edgeAvg>12)bad.push("画面全体の要素数が多く、主題の読み取りを妨げている");
+  if(m.salRatio<1.05)bad.push("最も強い領域と中央の差が小さく、どこが主役か決まっていない");
+  if(intentPts<25)bad.push("意図（"+intent+"）に対し、読み取られたのは"+m.top.name+"の要素だった");
+  if(AI.score&&Array.isArray(AI.score.good)&&AI.score.good.length){
+    good.length=0;AI.score.good.forEach(t=>{if(t)good.push(String(t));});}
+  if(AI.score&&Array.isArray(AI.score.bad)&&AI.score.bad.length){
+    bad.length=0;AI.score.bad.forEach(t=>{if(t)bad.push(String(t));});}
+  while(good.length<3)good.push("—");while(bad.length<3)bad.push("—");
+  document.getElementById("good").innerHTML=good.slice(0,3).map(t=>"<li>"+t+"</li>").join("");
+  document.getElementById("bad").innerHTML=bad.slice(0,3).map(t=>"<li>"+t+"</li>").join("");
+
+  // 次の一手（機材で分岐）
+  const phone=(gear==="smartphone");
+  let a1;
+  if(m.clipW>8)a1=phone?"露出を-0.7EVにして、明るい面の白飛びを止める":"露出補正を-0.7EVにして、ハイライトの階調を残す";
+  else if(m.salRatio<1.05)a1=phone?"2倍にして、見せたい対象だけを画面の半分以上に入れる":"焦点距離を上げ、主題を画面の半分以上に入れる";
+  else if(m.quiet.mean>150)a1="一歩横に動き、"+m.quiet.name+"の明るい面を画面外に出す";
+  else if(m.edgeAvg>12)a1=phone?"一歩前に出て、背景の要素数を半分に減らす":"一歩前に出るか絞りを開け、背景の要素数を減らす";
+  else a1="カメラの高さを腰まで下げ、主題を背景から抜く";
+  const a2=[];
+  a2.push("グリッド線を出し、"+(m.top.name)+"にある主題を画面の狙った位置に置き直す");
+  a2.push(phone?"同じ場所で立ち位置を1歩変えた2枚を撮り、後で比較機能にかける":"同じ場所で高さを変えた2枚を撮り、後で比較機能にかける");
+  let A1=a1,A2=a2;
+  if(AI.score&&AI.score.act1)A1=String(AI.score.act1);
+  if(AI.score&&Array.isArray(AI.score.act2)&&AI.score.act2.length)A2=AI.score.act2.filter(Boolean);
+  document.getElementById("act1").textContent=A1;
+  document.getElementById("act2").innerHTML=A2.map(t=>"<li>"+t+"</li>").join("");
+
+  document.getElementById("diag").textContent=
+    "平均輝度      "+m.avg.toFixed(1)+"\n標準偏差      "+m.sd.toFixed(1)+
+    "\n白飛び率      "+m.clipW.toFixed(2)+"%\n黒潰れ率      "+m.clipB.toFixed(2)+
+    "%\nラプラシアン分散 "+m.lapVar.toFixed(1)+"\n平均エッジ量  "+m.edgeAvg.toFixed(2)+
+    "\n顕著領域      "+m.top.name+"（中央比 "+m.salRatio.toFixed(2)+"）"+
+    "\n静穏領域      "+m.quiet.name+"\n色相数        "+m.colorCount+"（主要色 "+m.dom+"）"+
+    "\n使用モデル    "+(aiOn?CONF.modelBlind+" / "+CONF.modelScore:"未使用（端末内計測のみ）");
+
+  cur.result={total:total,intent:intentPts,frame:fr.pts,gaze:gaze.pts,tech:tech.pts,
+    color:col.low?null:col.pts,intentText:intent,route:route,gear:gear,
+    model:aiOn?CONF.modelScore:"local-metrics-v0.1",act1:A1};
+  document.getElementById("result").classList.remove("hidden");
+  document.getElementById("result").scrollIntoView({behavior:"smooth",block:"start"});
+};
+
+/* ============ 履歴 ============ */
+document.getElementById("save").onclick=()=>{
+  if(!cur||!cur.result)return;
+  const c=document.createElement("canvas");c.width=120;
+  c.height=Math.round(120*cur.h/cur.w);
+  c.getContext("2d").drawImage(cur.img,0,0,c.width,c.height);
+  HIST.push({id:Date.now(),name:cur.name,thumb:c.toDataURL("image/jpeg",0.6),
+    date:new Date().toLocaleDateString("ja-JP"),r:cur.result});
+  SS.set(LS+".hist",JSON.stringify(HIST));
+  document.getElementById("save").textContent="保存しました";
+  setTimeout(()=>document.getElementById("save").textContent="履歴に保存する",1600);
+};
+document.getElementById("clear").onclick=()=>{
+  if(!confirm("履歴を消しますか"))return;
+  HIST=[];SS.set(LS+".hist","[]");renderHist();fillCmp();
+};
+function renderHist(){
+  const el=document.getElementById("histList");
+  if(!HIST.length){el.innerHTML='<div class="empty">まだ保存された写真がありません</div>';
+    document.getElementById("chart").innerHTML="";document.getElementById("weak").textContent="";return;}
+  el.innerHTML=HIST.slice().reverse().map(h=>
+    '<div class="hist"><img src="'+h.thumb+'"><div class="t"><b>'+h.r.intentText+
+    '</b><span>'+h.date+' ／ '+h.name+'</span></div><div class="s">'+h.r.total+'</div></div>').join("");
+  // 推移グラフ
+  const pts=HIST.map(h=>h.r.total),n=pts.length;
+  const x=i=>n<2?160:16+i*(288/(n-1)),y=v=>110-v*0.9;
+  let path=pts.map((v,i)=>(i?"L":"M")+x(i)+" "+y(v)).join(" ");
+  document.getElementById("chart").innerHTML=
+    '<line x1="16" y1="'+y(0)+'" x2="304" y2="'+y(0)+'" stroke="#e6e5e1"/>'+
+    '<line x1="16" y1="'+y(50)+'" x2="304" y2="'+y(50)+'" stroke="#f0efec"/>'+
+    '<line x1="16" y1="'+y(100)+'" x2="304" y2="'+y(100)+'" stroke="#f0efec"/>'+
+    '<path d="'+path+'" fill="none" stroke="#191918" stroke-width="2"/>'+
+    pts.map((v,i)=>'<circle cx="'+x(i)+'" cy="'+y(v)+'" r="3.5" fill="#191918"/>').join("")+
+    '<text x="16" y="'+(y(100)-3)+'" font-size="8" fill="#6b6b68">100</text>';
+  // 弱点軸
+  const ax=[["意図一致度","intent",25],["意図に対する構図","frame",20],["視線と主題の伝達","gaze",25],
+    ["技術的減点","tech",20],["光と色の整理","color",10]];
+  const rates=ax.map(([n2,k,max])=>{
+    const v=HIST.map(h=>h.r[k]).filter(v2=>v2!==null&&v2!==undefined);
+    return {n:n2,rate:v.length?v.reduce((a,b)=>a+b,0)/v.length/max:1};
+  }).sort((a,b)=>a.rate-b.rate);
+  document.getElementById("weak").textContent=
+    "弱点軸："+rates[0].n+"（平均取得率 "+Math.round(rates[0].rate*100)+"%）／次点："+rates[1].n+
+    "　練習課題："+(rates[0].n==="技術的減点"?"今週は水平と露出を固定して撮る":"今週は主題を画面の半分以上に入れて撮る");
+}
+
+/* ============ 比較 ============ */
+function fillCmp(){
+  const o=HIST.slice().reverse().map(h=>'<option value="'+h.id+'">'+h.r.intentText.slice(0,18)+' ／ '+h.r.total+'点</option>').join("");
+  document.getElementById("cmpA").innerHTML=o;document.getElementById("cmpB").innerHTML=o;
+}
+document.getElementById("cmpRun").onclick=()=>{
+  const a=HIST.find(h=>h.id==document.getElementById("cmpA").value);
+  const b=HIST.find(h=>h.id==document.getElementById("cmpB").value);
+  const out=document.getElementById("cmpOut");
+  if(!a||!b||a.id===b.id){out.classList.remove("hidden");
+    out.innerHTML='<div class="empty">異なる2枚を選んでください</div>';return;}
+  const ax=[["意図一致度","intent",25],["意図に対する構図","frame",20],["視線と主題の伝達","gaze",25],
+    ["技術的減点","tech",20],["光と色の整理","color",10]];
+  const diff=a.r.total-b.r.total, tie=Math.abs(diff)<=5;
+  const sameRoute=a.r.route===b.r.route;
+  let deciding=null,best=0;
+  ax.forEach(([n,k])=>{const d=Math.abs((a.r[k]||0)-(b.r[k]||0));if(d>best){best=d;deciding=n;}});
+  out.classList.remove("hidden");
+  out.innerHTML=
+    '<h2>比較結果</h2>'+
+    '<div style="display:flex;gap:10px;margin:10px 0 14px">'+
+      '<img src="'+a.thumb+'" style="width:50%;border-radius:8px">'+
+      '<img src="'+b.thumb+'" style="width:50%;border-radius:8px"></div>'+
+    '<div class="total">'+(tie?"差なし":(diff>0?"写真1の勝ち":"写真2の勝ち"))+
+      '<small>'+(tie?"合計差 "+Math.abs(diff)+"点は誤差の範囲（±5点以内）":"合計差 "+Math.abs(diff)+"点")+'</small></div>'+
+    '<table style="margin-top:12px"><tr><th>軸</th><th class="num">配点</th><th class="num">写真1</th>'+
+      '<th class="num">写真2</th><th>差の扱い</th></tr>'+
+    ax.map(([n,k,max])=>{
+      const va=a.r[k],vb=b.r[k];
+      const excluded=(k==="color"&&(!sameRoute||va===null||vb===null));
+      return '<tr><td>'+n+'</td><td class="num">'+max+'</td><td class="num"><b>'+(va===null?"—":va)+
+        '</b></td><td class="num"><b>'+(vb===null?"—":vb)+'</b></td><td style="font-size:11px;color:#6b6b68">'+
+        (excluded?"経路が異なるため比較対象から除外":(Math.abs((va||0)-(vb||0))<=1?"実質同等":
+        ((va||0)>(vb||0)?"写真1が優位":"写真2が優位")))+'</td></tr>';}).join("")+
+    '<tr><td><b>合計</b></td><td class="num">100</td><td class="num"><b>'+a.r.total+
+      '</b></td><td class="num"><b>'+b.r.total+'</b></td><td></td></tr></table>'+
+    '<div class="next" style="margin-top:14px"><b>決め手になった軸</b><div class="act">'+
+      (tie?"決め手なし（差が誤差の範囲）":deciding+"（差 "+best+"点）")+'</div></div>'+
+    '<label class="fl">両方に共通する弱点</label><ul class="tight"><li>'+
+      (function(){let w=null,r=9;ax.forEach(([n,k,max])=>{
+        const va=a.r[k],vb=b.r[k];if(va===null||vb===null)return;
+        const rate=(va+vb)/2/max;if(rate<r){r=rate;w=n;}});
+      return w?w+"（両者平均の取得率 "+Math.round(r*100)+"%）＝これが撮影者の癖":"—";})()+'</li></ul>'+
+    '<div class="next" style="margin-top:12px"><b>次に撮るなら</b><div class="act">'+
+      (diff>=0?a.r.act1:b.r.act1)+'</div></div>'+
+    '<p class="note">採点条件：写真1='+a.r.model+' / 経路 '+a.r.route+'　写真2='+b.r.model+' / 経路 '+b.r.route+
+      (sameRoute?"":"　→ 経路が異なるため色軸は比較していません")+'</p>';
+};
+
+/* ============ 設定 ============ */
+function paintConf(){
+  document.getElementById("mBlind").value=CONF.modelBlind;
+  document.getElementById("mScore").value=CONF.modelScore;
+  document.getElementById("key").value=CONF.apiKey;
+  document.getElementById("edge").value=CONF.longEdge;
+  const on=!!CONF.apiKey;
+  document.getElementById("selfBox").classList.toggle("hidden",on);
+  document.getElementById("modeNote").textContent=on
+    ? "自動判定モード：意図一致度と構図を "+CONF.modelScore+" で判定します。"
+    : "自己判定モード：APIキー未設定のため、意図一致度だけ自分で選びます。技術・視線・色は端末内の計測値から自動採点します。";
+}
+document.getElementById("saveConf").onclick=()=>{
+  CONF.modelBlind=document.getElementById("mBlind").value.trim()||DEFAULTS.modelBlind;
+  CONF.modelScore=document.getElementById("mScore").value.trim()||DEFAULTS.modelScore;
+  CONF.apiKey=document.getElementById("key").value.trim();
+  CONF.longEdge=parseInt(document.getElementById("edge").value,10)||DEFAULTS.longEdge;
+  SS.set(LS+".conf",JSON.stringify(CONF));
+  paintConf();
+  document.getElementById("saveConf").textContent="保存しました";
+  setTimeout(()=>document.getElementById("saveConf").textContent="保存する",1600);
+};
+paintConf();renderHist();fillCmp();gate();
+if(!STORAGE_OK){
+  document.getElementById("modeNote").textContent+=
+    "　※この表示環境では保存領域が使えないため、履歴はページを閉じると消えます。";
+}
+</script>
+</body>
+</html>
